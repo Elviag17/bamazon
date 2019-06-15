@@ -21,15 +21,19 @@ connection.connect(function(err) {
   console.log("connected as id " + connection.threadId);
 });
 
-connection.query("SELECT * FROM products", function(err, res) {
-  for (var i = 0; i < res.length; i++) {
-    console.log(
-      res[i].item_id + " | " + res[i].product_name + " | " + res[i].price
-    );
-  }
-  console.log("-----------------------------------");
-  userInput();
-});
+function startQuery() {
+  connection.query("SELECT * FROM products", function(err, res) {
+    for (var i = 0; i < res.length; i++) {
+      console.log(
+        res[i].item_id + " | " + res[i].product_name + " | " + res[i].price
+      );
+    }
+    console.log("-----------------------------------");
+    userInput();
+  });
+}
+
+startQuery();
 
 function userInput() {
   inquirer
@@ -56,21 +60,58 @@ function UnitCount(idItem, units) {
     if (err) throw err;
 
     if (units <= res[0].stock_quantity) {
-      UpdateInventory(idItem, parseInt(units), res[0].stock_quantity);
+      console.log("Ringing up your total!");
+
+      console.log("-----------------------------------");
+
+      updateInventory(idItem, parseInt(units), res[0].stock_quantity);
     } else {
       console.log("Sorry, looks like we need to stock up!");
+      console.log("-----------------------------------");
+      newPurchase();
     }
   });
 }
 
-function UpdateInventory(idItem, units, stock_quantity) {
+function updateInventory(idItem, units, stock_quantity) {
+  var newQuantity = stock_quantity - units;
+  var update = "UPDATE products SET stock_quantity = ? WHERE item_id = ? ";
+  connection.query(update, [newQuantity, idItem], function(err, res) {
+    totalPaid(idItem, units);
+  });
+}
+
+function totalPaid(idItem, units) {
   connection.query(
-    "UPDATE products SET stock_quantity =  ? - ? WHERE item_id = ? "[
-      (stock_quantity, units, idItem)
-    ],
+    "SELECT price FROM products WHERE item_id = " + idItem,
     function(err, res) {
-      console.log("yay");
-      console.log(res);
+      var price = res[0].price;
+      var total = price * units;
+      console.log("Your total is : $" + total);
+
+      console.log("-----------------------------------");
+
+      newPurchase();
     }
   );
+}
+
+function newPurchase() {
+  inquirer
+    .prompt([
+      {
+        name: "choice",
+        message: "Would you like to purchase something else?"
+      }
+    ])
+    .then(function(res) {
+      var choice = res.choice.toLowerCase();
+      console.log(choice);
+      if (choice === "yes") {
+        startQuery();
+      } else {
+        console.log("-----------------------------------");
+        console.log("Thank you for your purchase. Have a great day!");
+      }
+    });
 }
