@@ -40,7 +40,13 @@ function userInput() {
     .prompt([
       {
         name: "idItem",
-        message: "What is the ID of the product you'd like to purchase?:"
+        message: "What is the ID of the product you'd like to purchase?:",
+        validate: function(input) {
+          if (input < 11) {
+            return true;
+          }
+          return "Please enter a valid Id";
+        }
       },
       {
         name: "units",
